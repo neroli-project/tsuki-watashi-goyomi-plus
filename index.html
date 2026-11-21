@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>月とわたしの星ごよみ ✨ 毎日の星読み</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Zen Maru Gothic & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js (1か月バイオリズムグラフ用) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- Astronomy Engine (CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Zen Maru Gothic', 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #FFF5F7 0%, #F3E8FF 50%, #E0F2FE 100%);
+            min-height: 100vh;
+            color: #332940;
+            overflow-x: hidden;
+        }
+
+        .font-num {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        /* ポップなグラスモーフィズム＆カードデザイン */
+        .pop-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 2px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 12px 32px -4px rgba(139, 92, 246, 0.12), 0 4px 12px -2px rgba(244, 114, 182, 0.08);
+            border-radius: 28px;
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+        }
+
+        .pop-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 16px 36px -4px rgba(139, 92, 246, 0.18), 0 6px 16px -2px rgba(244, 114, 182, 0.12);
+        }
+
+        /* ぷっくりボタン */
+        .pop-btn {
+            background: linear-gradient(135deg, #FF6B9E 0%, #A855F7 100%);
+            box-shadow: 0 8px 20px -4px rgba(168, 85, 247, 0.45), inset 0 2px 4px rgba(255, 255, 255, 0.4);
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .pop-btn:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 12px 24px -4px rgba(168, 85, 247, 0.55), inset 0 2px 4px rgba(255, 255, 255, 0.5);
+        }
+
+        .pop-btn:active {
+            transform: translateY(1px) scale(0.98);
+        }
+
+        /* ふわふわ浮遊アニメーション */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-8px) rotate(3deg); }
+        }
+        .animate-float {
+            animation: float 4s ease-in-out infinite;
+        }
+
+        /* スコアゲージのアニメーション */
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.9) translateY(15px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .animate-pop-in {
+            animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        /* カスタムチェックボックス */
+        .custom-checkbox:checked {
+            background-color: #A855F7;
+            border-color: #A855F7;
+        }
+
+        /* 背景のキラキラ装飾 */
+        .bg-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(60px);
+            z-index: -1;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<!-- ▼ ここからコピー ▼ -->
+<script>
+  (function() {
+    // 1. ここに好きな合言葉（鍵）を設定してください
+    const SECRET_KEY = "neroli"; 
+
+    // 2. あなたのnote記事のURL（鍵なしでアクセスされた時の案内先）
+    const NOTE_URL = "https://note.com"; 
+
+    const STORAGE_KEY = "app_unlocked_status";
+    const urlParams = new URLSearchParams(window.location.search);
+    const keyParam = urlParams.get("key");
+
+    // URLに正しい鍵がついているかチェック
+    if (keyParam === SECRET_KEY) {
+      // 正しければブラウザに「認証済み」を記憶させる
+      localStorage.setItem(STORAGE_KEY, SECRET_KEY);
+      // URLの末尾の「?key=...」を消してスッキリさせる（スクショ対策）
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    // ブラウザに正しい鍵が記憶されているかチェック
+    const savedKey = localStorage.getItem(STORAGE_KEY);
+    if (savedKey !== SECRET_KEY) {
+      // 鍵がない場合は画面を書き換えてブロックする
+      document.addEventListener("DOMContentLoaded", function() {
+        document.body.innerHTML = `
+          <div style="text-align: center; padding: 50px 20px; font-family: sans-serif; line-height: 1.6;">
+            <h2>🔒 このアプリはnote購入者専用です</h2>
+            <p>noteの有料記事内に記載されている専用リンクからアクセスしてください。</p>
+            <a href="${NOTE_URL}" style="display: inline-block; margin-top: 20px; padding: 12px 24px; background: #2cb696; color: #fff; text-decoration: none; border-radius: 6px; font-weight: bold;">
+              noteの記事ページへ戻る
+            </a>
+          </div>
+        `;
+      });
+    }
+  })();
+</script>
+<!-- ▲ ここまでコピー ▲ -->
+
+
+
+<body class="p-4 sm:p-6 md:p-8 flex flex-col items-center">
+
+    <!-- 背景のパステルオーブ装飾 -->
+    <div class="bg-orb w-72 h-72 bg-pink-300 top-[-40px] left-[-40px]"></div>
+    <div class="bg-orb w-80 h-80 bg-purple-300 bottom-[-60px] right-[-40px]"></div>
+    <div class="bg-orb w-64 h-64 bg-amber-200 top-[40%] left-[60%]"></div>
+
+    <!-- カスタムメッセージボックス（alertの代わり） -->
+    <div id="toast-box" class="fixed top-5 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300 opacity-0 pointer-events-none translate-y-[-20px]">
+        <div class="bg-gray-900/90 text-white px-6 py-3 rounded-full shadow-xl flex items-center gap-2 text-sm font-bold backdrop-blur-md">
+            <span id="toast-icon">✨</span>
+            <span id="toast-message">メッセージ</span>
+        </div>
+    </div>
+
+    <!-- メインコンテナ（スマホアプリ風の最大幅） -->
+    <main class="w-full max-w-md mx-auto space-y-6 pb-12">
+
+        <!-- ヘッダー -->
+        <header class="text-center pt-2 pb-1 relative">
+            <div class="inline-flex items-center gap-2 bg-white/80 px-4 py-1.5 rounded-full shadow-sm border border-purple-100 mb-2">
+                <span class="text-base animate-float">🌙</span>
+                <span class="text-xs font-bold tracking-wider text-purple-600 font-num">Tsuki to Watashi no Hoshigoyomi</span>
+                <span class="text-base animate-float" style="animation-delay: 1s;">✨</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-500 tracking-tight">
+                月とわたしの星ごよみ
+            </h1>
+            <p class="text-xs sm:text-sm text-gray-500 mt-1 font-medium">
+                あなたの生まれた星 × 今日の月のリアルな角度で診断🔮
+            </p>
+        </header>
+
+        <!-- 入力フォームカード -->
+        <section class="pop-card p-5 sm:p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-purple-100 pb-3">
+                <h2 class="text-base font-bold text-gray-800 flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-sm">🎂</span>
+                    プロフィール＆日付設定
+                </h2>
+                <button type="button" id="clear-data-btn" class="text-xs text-gray-400 hover:text-pink-500 transition underline hidden">
+                    履歴をリセット
+                </button>
+            </div>
+
+            <form id="astro-form" class="space-y-4">
+                <!-- 生年月日（必須） -->
+                <div>
+                    <label for="birth-date" class="block text-xs font-bold text-gray-600 mb-1.5 flex items-center gap-1">
+                        生年月日 <span class="bg-pink-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">必須</span>
+                    </label>
+                    <input type="date" id="birth-date" required
+                        class="w-full px-4 py-3 rounded-2xl bg-white/90 border-2 border-purple-100 focus:border-purple-400 focus:outline-none text-gray-800 font-bold font-num transition shadow-inner">
+                </div>
+
+                <!-- 出生時間 & 不明チェックボックス -->
+                <div class="bg-purple-50/70 p-3.5 rounded-2xl border border-purple-100/80 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <label for="birth-time" class="text-xs font-bold text-gray-600 flex items-center gap-1">
+                            ⏰ 出生時間
+                        </label>
+                        <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" id="time-unknown" checked
+                                class="custom-checkbox w-4 h-4 rounded text-purple-600 focus:ring-purple-400 border-gray-300 cursor-pointer">
+                            <span class="text-xs font-bold text-purple-700">不明（正午で計算）</span>
+                        </label>
+                    </div>
+                    <input type="time" id="birth-time" value="12:00" disabled
+                        class="w-full px-4 py-2.5 rounded-xl bg-gray-100 border border-gray-200 text-gray-400 font-bold font-num transition focus:outline-none">
+                </div>
+
+                <!-- 占いたい日付（デフォルト今日） -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label for="target-date" class="text-xs font-bold text-gray-600 flex items-center gap-1">
+                            📅 占いたい日付
+                        </label>
+                        <button type="button" id="set-today-btn" class="text-[11px] font-bold text-purple-600 bg-purple-100 hover:bg-purple-200 px-2.5 py-0.5 rounded-full transition">
+                            今日に戻す
+                        </button>
+                    </div>
+                    <input type="date" id="target-date" required
+                        class="w-full px-4 py-3 rounded-2xl bg-white/90 border-2 border-purple-100 focus:border-purple-400 focus:outline-none text-gray-800 font-bold font-num transition shadow-inner">
+                </div>
+
+                <!-- 占うボタン -->
+                <button type="submit" class="pop-btn w-full py-3.5 rounded-2xl text-white font-black text-base tracking-wide flex items-center justify-center gap-2 cursor-pointer mt-2">
+                    <span>✨ 今日の星模様を占う</span>
+                </button>
+            </form>
+        </section>
+
+        <!-- 占い結果エリア（初期は非表示） -->
+        <div id="result-area" class="hidden space-y-5">
+
+            <!-- あなたの星と今日の月バッジバー -->
+            <div class="pop-card p-4 bg-gradient-to-r from-indigo-50/90 via-purple-50/90 to-pink-50/90">
+                <div class="flex items-center justify-between text-xs font-bold text-gray-500 mb-2 px-1">
+                    <span id="result-date-label">2026年11月21日の空模様</span>
+                    <span class="text-purple-600">Astronomy Engine 算出</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2.5">
+                    <!-- 今日の月 -->
+                    <div class="bg-white/90 rounded-2xl p-3 flex items-center gap-2.5 shadow-sm border border-amber-100">
+                        <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-500 flex items-center justify-center text-xl shrink-0">
+                            🌙
+                        </div>
+                        <div>
+                            <div class="text-[10px] font-bold text-gray-400">今日の月星座</div>
+                            <div id="transit-moon-sign" class="text-sm font-black text-gray-800">牡羊座 12°</div>
+                        </div>
+                    </div>
+                    <!-- あなたの太陽 -->
+                    <div class="bg-white/90 rounded-2xl p-3 flex items-center gap-2.5 shadow-sm border border-pink-100">
+                        <div class="w-10 h-10 rounded-xl bg-pink-100 text-pink-500 flex items-center justify-center text-xl shrink-0">
+                            ☀️
+                        </div>
+                        <div>
+                            <div class="text-[10px] font-bold text-gray-400">あなたの太陽</div>
+                            <div id="natal-sun-sign" class="text-sm font-black text-gray-800">獅子座 24°</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. 総合スコアカード -->
+            <section class="pop-card p-6 relative overflow-hidden">
+                <!-- 装飾の星 -->
+                <div class="absolute -right-4 -top-4 text-6xl opacity-10 pointer-events-none">🌟</div>
+                
+                <div class="flex flex-col items-center text-center">
+                    <span class="inline-block bg-gradient-to-r from-amber-400 to-pink-500 text-white text-xs font-black px-3.5 py-1 rounded-full shadow-sm mb-3">
+                        🌟 今日のトータル気分スコア
+                    </span>
+
+                    <!-- スコア表示サークル -->
+                    <div class="relative w-36 h-36 flex items-center justify-center my-1">
+                        <svg class="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+                            <circle cx="60" cy="60" r="52" fill="none" stroke="#F3E8FF" stroke-width="12" />
+                            <circle id="total-score-ring" cx="60" cy="60" r="52" fill="none" stroke="url(#scoreGrad)" stroke-width="12"
+                                stroke-dasharray="326.7" stroke-dashoffset="326.7" stroke-linecap="round"
+                                class="transition-all duration-1000 ease-out" />
+                            <defs>
+                                <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#FF6B9E" />
+                                    <stop offset="100%" stop-color="#8B5CF6" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center">
+                            <div class="flex items-baseline">
+                                <span id="total-score-num" class="text-4xl font-black font-num text-gray-800 tracking-tight">0</span>
+                                <span class="text-sm font-bold text-gray-500 ml-0.5">点</span>
+                            </div>
+                            <span id="total-score-badge" class="text-[11px] font-bold text-purple-600 mt-0.5">計算中...</span>
+                        </div>
+                    </div>
+
+                    <!-- 総合メッセージ -->
+                    <div class="mt-3 bg-purple-50/90 rounded-2xl p-4 border border-purple-100 w-full text-left">
+                        <p id="total-advice" class="text-sm font-bold text-gray-700 leading-relaxed">
+                            今日の星の配置を読み解いています...
+                        </p>
+                    </div>
+
+                    <!-- 4ジャンル ミニサマリーバー -->
+                    <div class="grid grid-cols-2 gap-2.5 w-full mt-4">
+                        <div class="bg-white/80 rounded-xl p-2.5 border border-gray-100 flex items-center justify-between">
+                            <span class="text-xs font-bold text-gray-600">☀️ 全体ムード</span>
+                            <span id="mini-sun-score" class="text-sm font-black font-num text-amber-500">80点</span>
+                        </div>
+                        <div class="bg-white/80 rounded-xl p-2.5 border border-gray-100 flex items-center justify-between">
+                            <span class="text-xs font-bold text-gray-600">💖 恋愛の気分</span>
+                            <span id="mini-venus-score" class="text-sm font-black font-num text-pink-500">95点</span>
+                        </div>
+                        <div class="bg-white/80 rounded-xl p-2.5 border border-gray-100 flex items-center justify-between">
+                            <span class="text-xs font-bold text-gray-600">🪽 思考・会話</span>
+                            <span id="mini-mercury-score" class="text-sm font-black font-num text-sky-500">90点</span>
+                        </div>
+                        <div class="bg-white/80 rounded-xl p-2.5 border border-gray-100 flex items-center justify-between">
+                            <span class="text-xs font-bold text-gray-600">🔥 行動力</span>
+                            <span id="mini-mars-score" class="text-sm font-black font-num text-orange-500">60点</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 個別4カードコンテナ -->
+            <div id="detail-cards-container" class="space-y-4">
+                <!-- JSで動的に4つのカードを生成して挿入します -->
+            </div>
+
+            <!-- 1か月間の運勢バイオリズムグラフカード -->
+            <section class="pop-card p-5 sm:p-6 space-y-4">
+                <div class="flex items-center justify-between border-b border-purple-100 pb-3">
+                    <div>
+                        <span class="text-[10px] font-bold text-purple-500 uppercase tracking-wider block">Monthly Biorhythm</span>
+                        <h3 id="monthly-chart-title" class="text-base font-black text-gray-800 flex items-center gap-1.5">
+                            <span>📈</span> 2026年11月の運勢バイオリズム
+                        </h3>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button type="button" id="prev-month-btn" title="前の月" class="w-8 h-8 rounded-full bg-purple-50 hover:bg-purple-100 text-purple-600 flex items-center justify-center transition cursor-pointer">
+                            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                        </button>
+                        <button type="button" id="next-month-btn" title="次の月" class="w-8 h-8 rounded-full bg-purple-50 hover:bg-purple-100 text-purple-600 flex items-center justify-center transition cursor-pointer">
+                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ジャンル表示切り替えフィルターボタン -->
+                <div class="flex flex-wrap gap-1.5" id="chart-legend-toggles">
+                    <button type="button" data-dataset="0" class="chart-toggle-btn active px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-700 border border-amber-300 transition cursor-pointer">
+                        ☀️ 全体ムード
+                    </button>
+                    <button type="button" data-dataset="1" class="chart-toggle-btn active px-2.5 py-1 rounded-full text-[11px] font-bold bg-pink-100 text-pink-700 border border-pink-300 transition cursor-pointer">
+                        💖 恋愛の気分
+                    </button>
+                    <button type="button" data-dataset="2" class="chart-toggle-btn active px-2.5 py-1 rounded-full text-[11px] font-bold bg-sky-100 text-sky-700 border border-sky-300 transition cursor-pointer">
+                        🪽 思考・会話
+                    </button>
+                    <button type="button" data-dataset="3" class="chart-toggle-btn active px-2.5 py-1 rounded-full text-[11px] font-bold bg-orange-100 text-orange-700 border border-orange-300 transition cursor-pointer">
+                        🔥 行動力
+                    </button>
+                </div>
+
+                <!-- 折れ線グラフキャンバス -->
+                <div class="relative w-full h-64 bg-white/70 rounded-2xl p-2 border border-purple-50">
+                    <canvas id="monthly-biorhythm-chart"></canvas>
+                </div>
+
+                <p class="text-[11px] text-gray-500 text-center font-medium">
+                    💡 グラフの点をタップすると、その日の詳しい運勢に切り替えられます！<br>
+                    （上のボタンで気になる運勢だけ表示することもできます）
+                </p>
+            </section>
+
+            <!-- シェア・コピーボタン -->
+            <div class="pt-2">
+                <button type="button" id="copy-result-btn" class="w-full py-3.5 rounded-2xl bg-white hover:bg-purple-50 text-purple-700 font-bold text-sm border-2 border-purple-200 shadow-sm flex items-center justify-center gap-2 transition cursor-pointer">
+                    <i data-lucide="copy" class="w-4 h-4"></i>
+                    <span>今日の占い結果をコピーしてシェア</span>
+                </button>
+            </div>
+
+        </div>
+
+    </main>
+
+    <script>
+        // ==========================================
+        // 1. 占星術データ＆定数定義
+        // ==========================================
+        const ZODIAC_SIGNS = [
+            { name: "牡羊座", symbol: "♈", element: "火" },
+            { name: "牡牛座", symbol: "♉", element: "地" },
+            { name: "双子座", symbol: "♊", element: "風" },
+            { name: "蟹座",   symbol: "♋", element: "水" },
+            { name: "獅子座", symbol: "♌", element: "火" },
+            { name: "乙女座", symbol: "♍", element: "地" },
+            { name: "天秤座", symbol: "♎", element: "風" },
+            { name: "蠍座",   symbol: "♏", element: "水" },
+            { name: "射手座", symbol: "♐", element: "火" },
+            { name: "山羊座", symbol: "♑", element: "地" },
+            { name: "水瓶座", symbol: "♒", element: "風" },
+            { name: "魚座",   symbol: "♓", element: "水" }
+        ];
+
+        // メジャーアスペクト定義（基準点60点からの加点・減点と許容オーブ）
+        const ASPECT_TYPES = [
+            { angle: 0,   name: "コンジャンクション (0°)", shortName: "0° 重なり",   maxOrb: 8, baseDelta: 35, type: "harmony", badgeColor: "bg-amber-100 text-amber-700" },
+            { angle: 120, name: "トライン (120°)",        shortName: "120° 調和",   maxOrb: 7, baseDelta: 30, type: "harmony", badgeColor: "bg-emerald-100 text-emerald-700" },
+            { angle: 60,  name: "セクスタイル (60°)",     shortName: "60° 追い風",  maxOrb: 6, baseDelta: 20, type: "harmony", badgeColor: "bg-sky-100 text-sky-700" },
+            { angle: 90,  name: "スクエア (90°)",         shortName: "90° 刺激",    maxOrb: 7, baseDelta: -15, type: "hard",   badgeColor: "bg-rose-100 text-rose-700" },
+            { angle: 180, name: "オポジション (180°)",    shortName: "180° 揺れ",   maxOrb: 8, baseDelta: -10, type: "hard",   badgeColor: "bg-purple-100 text-purple-700" }
+        ];
+
+        // 4天体ごとの詳細メッセージテンプレート
+        const PLANET_MESSAGES = {
+            Sun: {
+                title: "今日の気分・全体ムード",
+                subtitle: "今日の月 × あなたの太陽",
+                icon: "☀️",
+                themeColor: "amber",
+                harmony: {
+                    headline: "自分らしく輝けるゴキゲンな日！",
+                    text: "心の欲求（月）とあなたの本質（太陽）が仲良く手を取り合っています。やりたいことに素直になると、自然と物事がスムーズに運びます。お気に入りの服やカフェで気分をさらに上げてみて！"
+                },
+                hard: {
+                    headline: "新しい自分に出会う刺激的な日！",
+                    text: "「こうしたい気持ち」と「やるべきこと」の間で少し心が揺れやすいかも。でもそれは成長のサイン！無理に完璧を目指さず、深呼吸して気分転換を取り入れるとスッキリ整います。"
+                },
+                neutral: {
+                    headline: "穏やかでマイペースに過ごせる日",
+                    text: "大きな波風はなく、自分のペースを大切にできる安定したムード。日常の小さなルーティンを丁寧にこなしたり、ゆっくりリラックスしたりするのにぴったりの1日です。"
+                }
+            },
+            Venus: {
+                title: "今日の恋愛運・ときめき度",
+                subtitle: "今日の月 × あなたの金星",
+                icon: "💖",
+                themeColor: "pink",
+                harmony: {
+                    headline: "愛されスイッチON！魅力あふれる日",
+                    text: "「愛されたい・楽しみたい」という感性がキラキラ輝く日！恋愛ムードが高まり、ちょっとした会話や仕草にときめきが生まれそう。自分磨きやファッションを楽しむのも大吉です。"
+                },
+                hard: {
+                    headline: "甘い誘惑とドラマチックな感情の日",
+                    text: "感受性が豊かになりすぎて、少し寂しがり屋になったり、いつもと違うタイプに惹かれたりするかも。衝動買いや勢いだけの連絡にはひと呼吸おいて、自分自身をたっぷり甘やかしてあげて。"
+                },
+                neutral: {
+                    headline: "ナチュラルな優しさが心地よい日",
+                    text: "気負わず自然体で人と接することができる恋愛ムード。ドラマチックな展開よりも、安心感や居心地の良さを大切にすると、素敵なご縁や温かい時間が育ちます。"
+                }
+            },
+            Mercury: {
+                title: "頭脳・コミュニケーション気分",
+                subtitle: "今日の月 × あなたの水星",
+                icon: "🪽",
+                themeColor: "sky",
+                harmony: {
+                    headline: "おしゃべり・アイデア冴えわたる日！",
+                    text: "言葉がスラスラ出てきて、連絡のやり取りや情報収集がとってもスムーズ！勉強や読書にも集中でき、ふとした思いつきがナイスアイデアに繋がります。SNSでの発信もおすすめ。"
+                },
+                hard: {
+                    headline: "考えすぎ・言いすぎ注意のデトックス日",
+                    text: "頭の中がフル回転して少し忙しくなりがち。勘違いや早とちり、つい一言多くなってしまう場面に気をつけて。頭の中のモヤモヤはスマホのメモやノートに書き出すとスッキリ安心できます！"
+                },
+                neutral: {
+                    headline: "落ち着いた判断力で着実に進める日",
+                    text: "感情に振り回されず、冷静に物事を整理できる日。溜まっていたメッセージの返信を片付けたり、好きな音楽やラジオを聴きながらのんびりインプットするのがおすすめです。"
+                }
+            },
+            Mars: {
+                title: "行動力・やる気スイッチ",
+                subtitle: "今日の月 × あなたの火星",
+                icon: "🔥",
+                themeColor: "orange",
+                harmony: {
+                    headline: "行動力バツグンの日！即行動が吉",
+                    text: "やる気スイッチがカチッと入り、思いついたらすぐ動けるエネルギッシュな日！仕事や家事、スポーツが気持ちよく捗ります。少し大胆なチャレンジにも追い風が吹いています。"
+                },
+                hard: {
+                    headline: "エネルギー全開！運動や掃除で発散吉",
+                    text: "やる気はあるのに少し焦りやすかったり、周囲のペースにイライラしやすい刺激的な日。溜まったパワーは前向きに発散するのが正解！部屋の片付けやストレッチ、早歩きで運気が急上昇します。"
+                },
+                neutral: {
+                    headline: "省エネモードでコツコツ積み上げる日",
+                    text: "無理にアクセルを全開にするよりも、自分の体力を温存しながらマイペースに進めるのが◎。体調管理や睡眠の質を高めることに意識を向けると、明日へのパワーがチャージされます。"
+                }
+            }
+        };
+
+        // ==========================================
+        // 2. 天文計算ロジック (Astronomy Engine)
+        // ==========================================
+
+        /**
+         * 指定された日時(Dateオブジェクト)における天体の黄道経度(0〜360度)を取得
+         */
+        function getEclipticLongitude(bodyName, dateObj) {
+            // Astronomy.GeoVector で地球中心の天体ベクトルを取得し、Ecliptic で黄道座標に変換
+            const vec = Astronomy.GeoVector(bodyName, dateObj, true);
+            const ecl = Astronomy.Ecliptic(vec);
+            // 0〜360度の範囲に正規化
+            let lon = ecl.elon % 360;
+            if (lon < 0) lon += 360;
+            return lon;
+        }
+
+        /**
+         * 黄道経度(0〜360度)から星座名と星座内度数を取得
+         */
+        function formatZodiacPosition(longitude) {
+            const signIndex = Math.floor(longitude / 30);
+            const degree = Math.floor(longitude % 30);
+            const sign = ZODIAC_SIGNS[signIndex];
+            return {
+                signName: sign.name,
+                symbol: sign.symbol,
+                degree: degree,
+                fullText: `${sign.symbol} ${sign.name} ${degree}°`
+            };
+        }
+
+        /**
+         * 2つの黄道経度の最短角度差(0〜180度)を計算
+         */
+        function getAngularDifference(lon1, lon2) {
+            let diff = Math.abs(lon1 - lon2) % 360;
+            if (diff > 180) {
+                diff = 360 - diff;
+            }
+            return diff;
+        }
+
+        /**
+         * 角度差からアスペクトとオーブ(誤差)を判定し、スコアを算出
+         * 基準点60点 + オーブに応じた微調整
+         */
+        function evaluateAspectAndScore(natalLon, transitMoonLon) {
+            const diff = getAngularDifference(natalLon, transitMoonLon);
+            const BASE_SCORE = 60;
+
+            let matchedAspect = null;
+            let minOrb = 999;
+
+            // 定義されたアスペクトに該当するかチェック
+            for (const asp of ASPECT_TYPES) {
+                const orb = Math.abs(diff - asp.angle);
+                if (orb <= asp.maxOrb && orb < minOrb) {
+                    matchedAspect = asp;
+                    minOrb = orb;
+                }
+            }
+
+            if (!matchedAspect) {
+                // ノーアスペクト（角度なし）
+                return {
+                    score: BASE_SCORE,
+                    aspectName: "ノーアスペクト",
+                    shortName: "穏やか・マイペース",
+                    orbText: "誤差なし",
+                    type: "neutral",
+                    badgeColor: "bg-gray-100 text-gray-600",
+                    diffDegree: Math.round(diff)
+                };
+            }
+
+            // オーブ（許容誤差）による微調整
+            // ピッタリ(orb = 0)なら100%の増減値、最大オーブ端なら約40%の増減値にする
+            const accuracyRatio = 1 - (minOrb / matchedAspect.maxOrb) * 0.6;
+            const adjustedDelta = Math.round(matchedAspect.baseDelta * accuracyRatio);
+            const finalScore = Math.max(25, Math.min(100, BASE_SCORE + adjustedDelta));
+
+            return {
+                score: finalScore,
+                aspectName: matchedAspect.name,
+                shortName: matchedAspect.shortName,
+                orbText: `誤差 ${minOrb.toFixed(1)}°`,
+                type: matchedAspect.type,
+                badgeColor: matchedAspect.badgeColor,
+                diffDegree: Math.round(diff)
+            };
+        }
+
+        /**
+         * 点数から5段階の星評価文字列を生成
+         */
+        function getStarRating(score) {
+            if (score >= 90) return "★★★★★";
+            if (score >= 78) return "★★★★☆";
+            if (score >= 60) return "★★★☆☆";
+            if (score >= 48) return "★★☆☆☆";
+            return "★☆☆☆☆";
+        }
+
+        // ==========================================
+        // 3. UI制御・イベント処理
+        // ==========================================
+
+        const birthDateInput = document.getElementById('birth-date');
+        const birthTimeInput = document.getElementById('birth-time');
+        const timeUnknownCheckbox = document.getElementById('time-unknown');
+        const targetDateInput = document.getElementById('target-date');
+        const setTodayBtn = document.getElementById('set-today-btn');
+        const clearDataBtn = document.getElementById('clear-data-btn');
+        const astroForm = document.getElementById('astro-form');
+        const resultArea = document.getElementById('result-area');
+
+        let latestShareText = "";
+        let monthlyChartInstance = null;
+        let currentChartYear = null;
+        let currentChartMonth = null; // 1-12
+        let cachedNatalLongitudes = null;
+
+        // トースト通知表示関数
+        function showToast(message, icon = "✨") {
+            const toastBox = document.getElementById('toast-box');
+            document.getElementById('toast-message').textContent = message;
+            document.getElementById('toast-icon').textContent = icon;
+
+            toastBox.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-[-20px]');
+            toastBox.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                toastBox.classList.remove('opacity-100', 'translate-y-0');
+                toastBox.classList.add('opacity-0', 'pointer-events-none', 'translate-y-[-20px]');
+            }, 2600);
+        }
+
+        // 今日の日付を YYYY-MM-DD 形式で取得
+        function getTodayString() {
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        // 出生時間「不明」チェックボックスの切り替え処理
+        function updateTimeInputState() {
+            if (timeUnknownCheckbox.checked) {
+                birthTimeInput.disabled = true;
+                birthTimeInput.value = "12:00";
+                birthTimeInput.classList.remove('bg-white/90', 'text-gray-800', 'border-purple-200');
+                birthTimeInput.classList.add('bg-gray-100', 'text-gray-400', 'border-gray-200');
+            } else {
+                birthTimeInput.disabled = false;
+                birthTimeInput.classList.remove('bg-gray-100', 'text-gray-400', 'border-gray-200');
+                birthTimeInput.classList.add('bg-white/90', 'text-gray-800', 'border-purple-200');
+            }
+        }
+
+        timeUnknownCheckbox.addEventListener('change', updateTimeInputState);
+
+        // 「今日に戻す」ボタン
+        setTodayBtn.addEventListener('click', () => {
+            targetDateInput.value = getTodayString();
+            showToast("占いたい日付を今日に設定しました", "📅");
+        });
+
+        // ローカルストレージから前回の入力データを復元
+        function loadSavedProfile() {
+            try {
+                const saved = localStorage.getItem('daily_astro_pop_profile');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    if (data.birthDate) birthDateInput.value = data.birthDate;
+                    if (typeof data.timeUnknown === 'boolean') {
+                        timeUnknownCheckbox.checked = data.timeUnknown;
+                        updateTimeInputState();
+                    }
+                    if (!data.timeUnknown && data.birthTime) {
+                        birthTimeInput.value = data.birthTime;
+                    }
+                    clearDataBtn.classList.remove('hidden');
+                }
+            } catch (e) {
+                console.warn("Storage read error", e);
+            }
+        }
+
+        // プロフィール保存
+        function saveProfile(birthDate, timeUnknown, birthTime) {
+            try {
+                localStorage.setItem('daily_astro_pop_profile', JSON.stringify({
+                    birthDate, timeUnknown, birthTime
+                }));
+                clearDataBtn.classList.remove('hidden');
+            } catch (e) {
+                console.warn("Storage write error", e);
+            }
+        }
+
+        // 履歴リセットボタン
+        clearDataBtn.addEventListener('click', () => {
+            localStorage.removeItem('daily_astro_pop_profile');
+            birthDateInput.value = "";
+            timeUnknownCheckbox.checked = true;
+            updateTimeInputState();
+            targetDateInput.value = getTodayString();
+            resultArea.classList.add('hidden');
+            clearDataBtn.classList.add('hidden');
+            showToast("保存された生年月日をリセットしました", "🧹");
+        });
+
+        // 初期化処理
+        window.addEventListener('DOMContentLoaded', () => {
+            targetDateInput.value = getTodayString();
+            updateTimeInputState();
+            loadSavedProfile();
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+            // もし保存済みの生年月日があれば自動で占う
+            if (birthDateInput.value) {
+                calculateAndRender();
+            }
+        });
+
+        // フォーム送信時
+        astroForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (!birthDateInput.value) {
+                showToast("生年月日を入力してください", "🎂");
+                return;
+            }
+            saveProfile(birthDateInput.value, timeUnknownCheckbox.checked, birthTimeInput.value);
+            calculateAndRender();
+        });
+
+        // ==========================================
+        // 4. メイン診断＆画面描画ロジック
+        // ==========================================
+        function calculateAndRender() {
+            try {
+                const bDateStr = birthDateInput.value; // YYYY-MM-DD
+                const isUnknown = timeUnknownCheckbox.checked;
+                const bTimeStr = isUnknown ? "12:00" : (birthTimeInput.value || "12:00");
+                const tDateStr = targetDateInput.value || getTodayString();
+
+                // 日本時間(JST: +09:00)としてDateオブジェクトを構築
+                const natalDateObj = new Date(`${bDateStr}T${bTimeStr}:00+09:00`);
+                // 占いたい日はその日の正午(12:00)の月の位置を基準にする
+                const targetDateObj = new Date(`${tDateStr}T12:00:00+09:00`);
+
+                if (isNaN(natalDateObj.getTime()) || isNaN(targetDateObj.getTime())) {
+                    showToast("日付の形式が正しくありません", "⚠️");
+                    return;
+                }
+
+                // 1. ネイタル（出生時）の4天体黄道経度を計算
+                const natalSunLon     = getEclipticLongitude("Sun", natalDateObj);
+                const natalVenusLon   = getEclipticLongitude("Venus", natalDateObj);
+                const natalMercuryLon = getEclipticLongitude("Mercury", natalDateObj);
+                const natalMarsLon    = getEclipticLongitude("Mars", natalDateObj);
+
+                cachedNatalLongitudes = {
+                    sun: natalSunLon,
+                    venus: natalVenusLon,
+                    mercury: natalMercuryLon,
+                    mars: natalMarsLon
+                };
+
+                // 2. トランジット（占いたい日）の月の黄道経度を計算
+                const transitMoonLon  = getEclipticLongitude("Moon", targetDateObj);
+
+                // 星座表示用フォーマット
+                const natalSunInfo    = formatZodiacPosition(natalSunLon);
+                const natalVenusInfo  = formatZodiacPosition(natalVenusLon);
+                const natalMercuryInfo= formatZodiacPosition(natalMercuryLon);
+                const natalMarsInfo   = formatZodiacPosition(natalMarsLon);
+                const transitMoonInfo = formatZodiacPosition(transitMoonLon);
+
+                // 3. 各天体と今日の月のアスペクト・スコア算出
+                const sunResult     = evaluateAspectAndScore(natalSunLon, transitMoonLon);
+                const venusResult   = evaluateAspectAndScore(natalVenusLon, transitMoonLon);
+                const mercuryResult = evaluateAspectAndScore(natalMercuryLon, transitMoonLon);
+                const marsResult    = evaluateAspectAndScore(natalMarsLon, transitMoonLon);
+
+                // 4. トータル気分スコア（4ジャンルの加重平均：全体ムードを少し重視）
+                const totalScore = Math.round(
+                    (sunResult.score * 0.34) +
+                    (venusResult.score * 0.22) +
+                    (mercuryResult.score * 0.22) +
+                    (marsResult.score * 0.22)
+                );
+
+                // 日付ラベル更新
+                const [ty, tm, td] = tDateStr.split('-');
+                document.getElementById('result-date-label').textContent = `${ty}年${Number(tm)}月${Number(td)}日の星模様`;
+                document.getElementById('transit-moon-sign').textContent = transitMoonInfo.fullText;
+                document.getElementById('natal-sun-sign').textContent = natalSunInfo.fullText;
+
+                // トータルスコアのリングアニメーションと数値更新
+                const ring = document.getElementById('total-score-ring');
+                const circumference = 326.7;
+                const offset = circumference - (totalScore / 100) * circumference;
+                
+                // 一旦リセットしてからアニメーション
+                ring.style.strokeDashoffset = circumference;
+                setTimeout(() => {
+                    ring.style.strokeDashoffset = offset;
+                }, 50);
+
+                animateNumber('total-score-num', totalScore);
+
+                // トータル評価バッジ＆総合アドバイス生成
+                const { badgeText, adviceText } = generateTotalSummary(totalScore, {
+                    sun: sunResult,
+                    venus: venusResult,
+                    mercury: mercuryResult,
+                    mars: marsResult
+                });
+                document.getElementById('total-score-badge').textContent = badgeText;
+                document.getElementById('total-advice').textContent = adviceText;
+
+                // ミニサマリー更新
+                document.getElementById('mini-sun-score').textContent = `${sunResult.score}点`;
+                document.getElementById('mini-venus-score').textContent = `${venusResult.score}点`;
+                document.getElementById('mini-mercury-score').textContent = `${mercuryResult.score}点`;
+                document.getElementById('mini-mars-score').textContent = `${marsResult.score}点`;
+
+                // 4つの詳細カード描画
+                const cardsData = [
+                    { key: "Sun",     natalInfo: natalSunInfo,     result: sunResult },
+                    { key: "Venus",   natalInfo: natalVenusInfo,   result: venusResult },
+                    { key: "Mercury", natalInfo: natalMercuryInfo, result: mercuryResult },
+                    { key: "Mars",    natalInfo: natalMarsInfo,    result: marsResult }
+                ];
+
+                renderDetailCards(cardsData, transitMoonInfo);
+
+                // シェア用テキスト作成
+                latestShareText = [
+                    `✨ 月とわたしの星ごよみ（${ty}/${Number(tm)}/${Number(td)}の星読み）`,
+                    `🌟 今日のトータル気分スコア：${totalScore}点`,
+                    `🌙 今日の月：${transitMoonInfo.fullText} / ☀️ 太陽：${natalSunInfo.fullText}`,
+                    `・☀️ 全体ムード：${sunResult.score}点（${sunResult.shortName}）`,
+                    `・💖 恋愛の気分：${venusResult.score}点（${venusResult.shortName}）`,
+                    `・🪽 思考・会話：${mercuryResult.score}点（${mercuryResult.shortName}）`,
+                    `・🔥 行動力：${marsResult.score}点（${marsResult.shortName}）`,
+                    `💬 ${adviceText}`
+                ].join('\n');
+
+                // 1か月バイオリズムグラフを描画・更新
+                currentChartYear = Number(ty);
+                currentChartMonth = Number(tm);
+                renderMonthlyChart(currentChartYear, currentChartMonth, Number(td));
+
+                // 結果エリアを表示してスムーズにスクロール
+                resultArea.classList.remove('hidden');
+                resultArea.classList.remove('animate-pop-in');
+                void resultArea.offsetWidth; // リフロー強制
+                resultArea.classList.add('animate-pop-in');
+
+                setTimeout(() => {
+                    resultArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+
+            } catch (error) {
+                console.error("Calculation Error:", error);
+                showToast("星の計算中にエラーが発生しました", "⚠️");
+            }
+        }
+
+        // 数字カウントアップアニメーション
+        function animateNumber(elementId, targetVal) {
+            const el = document.getElementById(elementId);
+            const duration = 700;
+            const startTime = performance.now();
+
+            function step(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                // easeOutQuart
+                const ease = 1 - Math.pow(1 - progress, 4);
+                const current = Math.round(targetVal * ease);
+                el.textContent = current;
+                if (progress < 1) {
+                    requestAnimationFrame(step);
+                }
+            }
+            requestAnimationFrame(step);
+        }
+
+        // 総合メッセージ生成（ハードアスペクトが多い日もポジティブに変換！）
+        function generateTotalSummary(totalScore, results) {
+            const items = [
+                { name: "全体ムード", score: results.sun.score, action: "自分の直感を信じて行動してみる" },
+                { name: "恋愛運", score: results.venus.score, action: "気になる人に連絡したりおしゃれを楽しむ" },
+                { name: "会話・アイデア", score: results.mercury.score, action: "思いついたアイデアをメモしたり発信する" },
+                { name: "行動力", score: results.mars.score, action: "やりたかったことに思い切って着手する" }
+            ];
+
+            // 一番高いジャンルと低いジャンルを取得
+            items.sort((a, b) => b.score - a.score);
+            const best = items[0];
+
+            let badgeText = "";
+            let adviceText = "";
+
+            if (totalScore >= 85) {
+                badgeText = "✨ 最高にハッピーな追い風デー！";
+                adviceText = `全体的に素晴らしい追い風が吹く絶好調の1日！特に「${best.name}」がキラキラ輝いているので、${best.action}と素敵な幸運を引き寄せられそう！`;
+            } else if (totalScore >= 70) {
+                badgeText = "🌈 軽やかで心地よい好調デー";
+                adviceText = `スムーズに物事が進みやすい好調な1日！「${best.name}」に嬉しい星のサポートが入っているので、${best.action}のがおすすめです。`;
+            } else if (totalScore >= 58) {
+                badgeText = "🍀 マイペースに整う穏やかデー";
+                if (best.score >= 75) {
+                    adviceText = `全体的には落ち着いたムードですが、「${best.name}」にはしっかり追い風が吹いています！無理せずマイペースを保ちつつ、${best.action}と充実した日になりますよ。`;
+                } else {
+                    adviceText = `自分のペースを大切にできる穏やかな日。大きな変化よりも、お気に入りのドリンクを飲んだり、身の回りを整えたりすることで心がしっかり充電されます。`;
+                }
+            } else {
+                // ハードアスペクト（90度・180度）が多い日のポジティブ変換アドバイス
+                badgeText = "⚡ 刺激たっぷり！デトックス＆成長日和";
+                adviceText = `星のエネルギーが強く働き、心が動きやすい刺激的な日！モヤモヤや焦りは「新しい自分へ脱皮するサイン」です。今日は無理に頑張りすぎず、運動や掃除、好きなスイーツで気分をリフレッシュすると運気が一気に好転します！`;
+            }
+
+            return { badgeText, adviceText };
+        }
+
+        // 4つの詳細カードをHTML生成して描画
+        function renderDetailCards(cardsData, transitMoonInfo) {
+            const container = document.getElementById('detail-cards-container');
+            container.innerHTML = "";
+
+            const colorMap = {
+                amber:  { bg: "bg-amber-50",  border: "border-amber-200",  text: "text-amber-600",  bar: "from-amber-400 to-orange-400" },
+                pink:   { bg: "bg-pink-50",   border: "border-pink-200",   text: "text-pink-600",   bar: "from-pink-400 to-rose-500" },
+                sky:    { bg: "bg-sky-50",    border: "border-sky-200",    text: "text-sky-600",    bar: "from-sky-400 to-indigo-400" },
+                orange: { bg: "bg-orange-50", border: "border-orange-200", text: "text-orange-600", bar: "from-orange-400 to-red-500" }
+            };
+
+            cardsData.forEach(({ key, natalInfo, result }) => {
+                const meta = PLANET_MESSAGES[key];
+                const theme = colorMap[meta.themeColor];
+                const msgObj = meta[result.type];
+                const stars = getStarRating(result.score);
+
+                const cardHTML = `
+                    <article class="pop-card p-5 space-y-3.5">
+                        <!-- カードヘッダー -->
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-2xl ${theme.bg} border ${theme.border} flex items-center justify-center text-2xl shadow-sm shrink-0">
+                                    ${meta.icon}
+                                </div>
+                                <div>
+                                    <span class="text-[11px] font-bold text-gray-400 block">${meta.subtitle}</span>
+                                    <h3 class="text-base font-black text-gray-800">${meta.title}</h3>
+                                </div>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <div class="text-2xl font-black font-num ${theme.text} leading-none">
+                                    ${result.score}<span class="text-xs font-bold ml-0.5">点</span>
+                                </div>
+                                <div class="text-xs tracking-tighter text-amber-400 mt-1">${stars}</div>
+                            </div>
+                        </div>
+
+                        <!-- プログレスバー -->
+                        <div class="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div class="h-full bg-gradient-to-r ${theme.bar} rounded-full transition-all duration-700" style="width: ${result.score}%"></div>
+                        </div>
+
+                        <!-- 天体ポジション＆アスペクトバッジ -->
+                        <div class="flex flex-wrap items-center justify-between gap-2 bg-gray-50/90 px-3.5 py-2 rounded-xl border border-gray-100 text-xs">
+                            <div class="font-bold text-gray-600">
+                                あなたの星: <span class="text-gray-900">${natalInfo.fullText}</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="px-2.5 py-0.5 rounded-full font-bold ${result.badgeColor}">
+                                    ${result.aspectName}
+                                </span>
+                                ${result.type !== 'neutral' ? `<span class="text-[11px] font-bold text-gray-400">(${result.orbText})</span>` : ''}
+                            </div>
+                        </div>
+
+                        <!-- アドバイス本文 -->
+                        <div class="space-y-1 pt-0.5">
+                            <h4 class="text-sm font-black ${theme.text} flex items-center gap-1.5">
+                                <span>💬</span> ${msgObj.headline}
+                            </h4>
+                            <p class="text-xs sm:text-sm text-gray-600 leading-relaxed font-medium">
+                                ${msgObj.text}
+                            </p>
+                        </div>
+                    </article>
+                `;
+                container.insertAdjacentHTML('beforeend', cardHTML);
+            });
+        }
+
+        // ==========================================
+        // 5. 1か月バイオリズムグラフ描画・操作ロジック
+        // ==========================================
+        function renderMonthlyChart(year, month, selectedDay = null) {
+            if (!cachedNatalLongitudes) return;
+
+            document.getElementById('monthly-chart-title').innerHTML = `<span>📈</span> ${year}年${month}月の運勢バイオリズム`;
+
+            // その月の日数を取得
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const labels = [];
+            const dateStrings = [];
+            const sunScores = [];
+            const venusScores = [];
+            const mercuryScores = [];
+            const marsScores = [];
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const mm = String(month).padStart(2, '0');
+                const dd = String(d).padStart(2, '0');
+                const dateStr = `${year}-${mm}-${dd}`;
+                dateStrings.push(dateStr);
+                labels.push(`${d}日`);
+
+                const dayObj = new Date(`${dateStr}T12:00:00+09:00`);
+                const moonLon = getEclipticLongitude("Moon", dayObj);
+
+                sunScores.push(evaluateAspectAndScore(cachedNatalLongitudes.sun, moonLon).score);
+                venusScores.push(evaluateAspectAndScore(cachedNatalLongitudes.venus, moonLon).score);
+                mercuryScores.push(evaluateAspectAndScore(cachedNatalLongitudes.mercury, moonLon).score);
+                marsScores.push(evaluateAspectAndScore(cachedNatalLongitudes.mars, moonLon).score);
+            }
+
+            // 選択中の日のポイントだけ少し大きく表示する配列
+            const pointRadii = labels.map((_, idx) => (selectedDay && idx + 1 === selectedDay) ? 6 : 2.5);
+
+            const ctx = document.getElementById('monthly-biorhythm-chart').getContext('2d');
+
+            // 既存のグラフがあれば破棄前に表示状態を引き継ぐ
+            const visibilityState = [true, true, true, true];
+            if (monthlyChartInstance) {
+                monthlyChartInstance.data.datasets.forEach((_, idx) => {
+                    visibilityState[idx] = monthlyChartInstance.isDatasetVisible(idx);
+                });
+                monthlyChartInstance.destroy();
+            }
+
+            monthlyChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '☀️ 全体ムード',
+                            data: sunScores,
+                            borderColor: '#F59E0B',
+                            backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                            borderWidth: 2.5,
+                            tension: 0.4,
+                            pointRadius: pointRadii,
+                            pointHoverRadius: 7,
+                            pointBackgroundColor: '#F59E0B',
+                            hidden: !visibilityState[0]
+                        },
+                        {
+                            label: '💖 恋愛の気分',
+                            data: venusScores,
+                            borderColor: '#EC4899',
+                            backgroundColor: 'rgba(236, 72, 153, 0.15)',
+                            borderWidth: 2.5,
+                            tension: 0.4,
+                            pointRadius: pointRadii,
+                            pointHoverRadius: 7,
+                            pointBackgroundColor: '#EC4899',
+                            hidden: !visibilityState[1]
+                        },
+                        {
+                            label: '🪽 思考・会話',
+                            data: mercuryScores,
+                            borderColor: '#0EA5E9',
+                            backgroundColor: 'rgba(14, 165, 233, 0.15)',
+                            borderWidth: 2.5,
+                            tension: 0.4,
+                            pointRadius: pointRadii,
+                            pointHoverRadius: 7,
+                            pointBackgroundColor: '#0EA5E9',
+                            hidden: !visibilityState[2]
+                        },
+                        {
+                            label: '🔥 行動力',
+                            data: marsScores,
+                            borderColor: '#F97316',
+                            backgroundColor: 'rgba(249, 115, 22, 0.15)',
+                            borderWidth: 2.5,
+                            tension: 0.4,
+                            pointRadius: pointRadii,
+                            pointHoverRadius: 7,
+                            pointBackgroundColor: '#F97316',
+                            hidden: !visibilityState[3]
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    onClick: (event, elements) => {
+                        if (elements && elements.length > 0) {
+                            const index = elements[0].index;
+                            const clickedDateStr = dateStrings[index];
+                            // Chart.jsのイベント完了後に安全に再描画するため非同期で実行
+                            setTimeout(() => {
+                                targetDateInput.value = clickedDateStr;
+                                calculateAndRender();
+                                showToast(`${month}月${index + 1}日の星模様に切り替えました`, "📅");
+                            }, 0);
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false // カスタムトグルボタンを使うため標準凡例は非表示
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(30, 27, 46, 0.92)',
+                            titleFont: { family: "'Zen Maru Gothic', sans-serif", size: 13, weight: 'bold' },
+                            bodyFont: { family: "'Zen Maru Gothic', sans-serif", size: 12 },
+                            padding: 10,
+                            cornerRadius: 12,
+                            callbacks: {
+                                title: (items) => `${year}年${month}月${items[0].label}`,
+                                label: (context) => ` ${context.dataset.label}: ${context.parsed.y}点`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: 20,
+                            max: 105,
+                            ticks: {
+                                stepSize: 20,
+                                font: { family: "'Plus Jakarta Sans', sans-serif", size: 10, weight: 'bold' },
+                                color: '#9CA3AF'
+                            },
+                            grid: {
+                                color: 'rgba(168, 85, 247, 0.08)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                maxTicksLimit: 8,
+                                font: { family: "'Zen Maru Gothic', sans-serif", size: 10, weight: 'bold' },
+                                color: '#6B7280'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 前月・次月切り替えボタン
+        document.getElementById('prev-month-btn').addEventListener('click', () => {
+            if (!currentChartYear || !currentChartMonth) return;
+            currentChartMonth -= 1;
+            if (currentChartMonth < 1) {
+                currentChartMonth = 12;
+                currentChartYear -= 1;
+            }
+            const [ty, tm, td] = targetDateInput.value.split('-').map(Number);
+            const selDay = (ty === currentChartYear && tm === currentChartMonth) ? td : null;
+            renderMonthlyChart(currentChartYear, currentChartMonth, selDay);
+        });
+
+        document.getElementById('next-month-btn').addEventListener('click', () => {
+            if (!currentChartYear || !currentChartMonth) return;
+            currentChartMonth += 1;
+            if (currentChartMonth > 12) {
+                currentChartMonth = 1;
+                currentChartYear += 1;
+            }
+            const [ty, tm, td] = targetDateInput.value.split('-').map(Number);
+            const selDay = (ty === currentChartYear && tm === currentChartMonth) ? td : null;
+            renderMonthlyChart(currentChartYear, currentChartMonth, selDay);
+        });
+
+        // ジャンル別フィルターボタンの切り替え処理
+        document.querySelectorAll('.chart-toggle-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!monthlyChartInstance) return;
+                const dsIndex = Number(btn.dataset.dataset);
+                const isVisible = monthlyChartInstance.isDatasetVisible(dsIndex);
+
+                if (isVisible) {
+                    monthlyChartInstance.hide(dsIndex);
+                    btn.classList.remove('active');
+                    btn.classList.add('opacity-40', 'grayscale');
+                } else {
+                    monthlyChartInstance.show(dsIndex);
+                    btn.classList.add('active');
+                    btn.classList.remove('opacity-40', 'grayscale');
+                }
+            });
+        });
+
+        // 結果コピーボタン（iframe制限を考慮し document.execCommand('copy') を使用）
+        document.getElementById('copy-result-btn').addEventListener('click', () => {
+            if (!latestShareText) return;
+            const textarea = document.createElement('textarea');
+            textarea.value = latestShareText;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast("占い結果をクリップボードにコピーしました！", "📋");
+            } catch (err) {
+                showToast("コピーに失敗しました", "⚠️");
+            }
+            document.body.removeChild(textarea);
+        });
+
+// 鍵が正しい時だけ script.js を読み込む
+  if (localStorage.getItem("app_unlocked_status") === "neroli") { // ←ここも設定した鍵と同じにする
+    const s = document.createElement("script");
+    s.src = "script.js";
+    document.body.appendChild(s);
+  }
+
+
+    </script>
+</body>
+
+<!-- ▼ クレジット表記（画面最下部に固定） ▼ -->
+<div style="
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #ffeb3b;
+  background: rgba(15, 23, 42, 0.92);
+  padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
+  z-index: 99999;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  box-sizing: border-box;
+  pointer-events: none;
+">
+  © 2026 ネロリの小部屋 / note購入者専用アプリ
+</div>
+
+
+</html>
