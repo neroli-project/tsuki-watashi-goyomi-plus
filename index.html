@@ -86,6 +86,18 @@
             border-color: #A855F7;
         }
 
+        /* iOS Safari等で date / time 入力欄が親要素からはみ出すのを防ぐ */
+        input[type="date"],
+        input[type="time"] {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
         /* 背景のキラキラ装飾 */
         .bg-orb {
             position: fixed;
@@ -97,7 +109,6 @@
         }
     </style>
 </head>
-
 <!-- ▼ ここからコピー ▼ -->
 <script>
   (function() {
@@ -138,7 +149,6 @@
   })();
 </script>
 <!-- ▲ ここまでコピー ▲ -->
-
 
 
 <body class="p-4 sm:p-6 md:p-8 flex flex-col items-center">
@@ -188,32 +198,32 @@
 
             <form id="astro-form" class="space-y-4">
                 <!-- 生年月日（必須） -->
-                <div>
+                <div class="w-full min-w-0">
                     <label for="birth-date" class="block text-xs font-bold text-gray-600 mb-1.5 flex items-center gap-1">
                         生年月日 <span class="bg-pink-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">必須</span>
                     </label>
                     <input type="date" id="birth-date" required
-                        class="w-full px-4 py-3 rounded-2xl bg-white/90 border-2 border-purple-100 focus:border-purple-400 focus:outline-none text-gray-800 font-bold font-num transition shadow-inner">
+                        class="w-full max-w-full min-w-0 box-border px-4 py-3 rounded-2xl bg-white/90 border-2 border-purple-100 focus:border-purple-400 focus:outline-none text-gray-800 font-bold font-num transition shadow-inner">
                 </div>
 
                 <!-- 出生時間 & 不明チェックボックス -->
-                <div class="bg-purple-50/70 p-3.5 rounded-2xl border border-purple-100/80 space-y-2.5">
-                    <div class="flex items-center justify-between">
-                        <label for="birth-time" class="text-xs font-bold text-gray-600 flex items-center gap-1">
+                <div class="w-full min-w-0 bg-purple-50/70 p-3.5 rounded-2xl border border-purple-100/80 space-y-2.5">
+                    <div class="flex items-center justify-between gap-2">
+                        <label for="birth-time" class="text-xs font-bold text-gray-600 flex items-center gap-1 shrink-0">
                             ⏰ 出生時間
                         </label>
-                        <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                        <label class="inline-flex items-center gap-1.5 cursor-pointer select-none">
                             <input type="checkbox" id="time-unknown" checked
                                 class="custom-checkbox w-4 h-4 rounded text-purple-600 focus:ring-purple-400 border-gray-300 cursor-pointer">
                             <span class="text-xs font-bold text-purple-700">不明（正午で計算）</span>
                         </label>
                     </div>
                     <input type="time" id="birth-time" value="12:00" disabled
-                        class="w-full px-4 py-2.5 rounded-xl bg-gray-100 border border-gray-200 text-gray-400 font-bold font-num transition focus:outline-none">
+                        class="w-full max-w-full min-w-0 box-border px-4 py-2.5 rounded-xl bg-gray-100 border border-gray-200 text-gray-400 font-bold font-num transition focus:outline-none">
                 </div>
 
                 <!-- 占いたい日付（デフォルト今日） -->
-                <div>
+                <div class="w-full min-w-0">
                     <div class="flex items-center justify-between mb-1.5">
                         <label for="target-date" class="text-xs font-bold text-gray-600 flex items-center gap-1">
                             📅 占いたい日付
@@ -223,7 +233,7 @@
                         </button>
                     </div>
                     <input type="date" id="target-date" required
-                        class="w-full px-4 py-3 rounded-2xl bg-white/90 border-2 border-purple-100 focus:border-purple-400 focus:outline-none text-gray-800 font-bold font-num transition shadow-inner">
+                        class="w-full max-w-full min-w-0 box-border px-4 py-3 rounded-2xl bg-white/90 border-2 border-purple-100 focus:border-purple-400 focus:outline-none text-gray-800 font-bold font-num transition shadow-inner">
                 </div>
 
                 <!-- 占うボタン -->
@@ -638,25 +648,25 @@
             const now = new Date();
             const yyyy = now.getFullYear();
             const mm = String(now.getMonth() + 1).padStart(2, '0');
-            const dd = String(now.getDate()).padStart(2, '0');
-            return `${yyyy}-${mm}-${dd}`;
-        }
-
-        // 出生時間「不明」チェックボックスの切り替え処理
-        function updateTimeInputState() {
-            if (timeUnknownCheckbox.checked) {
-                birthTimeInput.disabled = true;
-                birthTimeInput.value = "12:00";
-                birthTimeInput.classList.remove('bg-white/90', 'text-gray-800', 'border-purple-200');
-                birthTimeInput.classList.add('bg-gray-100', 'text-gray-400', 'border-gray-200');
-            } else {
-                birthTimeInput.disabled = false;
-                birthTimeInput.classList.remove('bg-gray-100', 'text-gray-400', 'border-gray-200');
-                birthTimeInput.classList.add('bg-white/90', 'text-gray-800', 'border-purple-200');
+        timeUnknownCheckbox.addEventListener('change', () => {
+            updateTimeInputState();
+            if (birthDateInput.value) {
+                saveProfile(birthDateInput.value, timeUnknownCheckbox.checked, birthTimeInput.value);
             }
-        }
+        });
 
-        timeUnknownCheckbox.addEventListener('change', updateTimeInputState);
+        // 生年月日・出生時間を変更した時点で自動保存する
+        birthDateInput.addEventListener('change', () => {
+            if (birthDateInput.value) {
+                saveProfile(birthDateInput.value, timeUnknownCheckbox.checked, birthTimeInput.value);
+            }
+        });
+
+        birthTimeInput.addEventListener('change', () => {
+            if (birthDateInput.value) {
+                saveProfile(birthDateInput.value, timeUnknownCheckbox.checked, birthTimeInput.value);
+            }
+        });
 
         // 「今日に戻す」ボタン
         setTodayBtn.addEventListener('click', () => {
@@ -1236,7 +1246,6 @@
 
     </script>
 </body>
-
 <!-- ▼ クレジット表記（画面最下部に固定） ▼ -->
 <div style="
   position: fixed;
@@ -1256,6 +1265,5 @@
 ">
   © 2026 ネロリの小部屋 / note購入者専用アプリ
 </div>
-
 
 </html>
