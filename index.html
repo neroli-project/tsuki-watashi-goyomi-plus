@@ -109,6 +109,7 @@
         }
     </style>
 </head>
+
 <!-- ▼ ここからコピー ▼ -->
 <script>
   (function() {
@@ -148,6 +149,8 @@
     }
   })();
 </script>
+<!-- ▲ ここまでコピー ▲ -->
+
 
 
 <body class="p-4 sm:p-6 md:p-8 flex flex-col items-center">
@@ -335,6 +338,43 @@
                         </div>
                     </div>
                 </div>
+            </section>
+
+            <!-- 開運日ランキングカード（1週間・1か月・1年間） -->
+            <section class="pop-card p-5 sm:p-6 space-y-4">
+                <div class="flex items-center justify-between border-b border-purple-100 pb-3">
+                    <div>
+                        <span class="text-[10px] font-bold text-pink-500 uppercase tracking-wider block">Lucky Days Ranking</span>
+                        <h3 class="text-base font-black text-gray-800 flex items-center gap-1.5">
+                            <span>👑</span> 運勢がいい日ランキング
+                        </h3>
+                    </div>
+                    <span id="ranking-base-label" class="text-[11px] font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full">
+                        11/21から
+                    </span>
+                </div>
+
+                <!-- 期間切り替えタブ（1週間 / 1か月 / 1年間） -->
+                <div class="grid grid-cols-3 gap-1.5 bg-purple-100/70 p-1 rounded-2xl">
+                    <button type="button" data-period="week" class="ranking-tab-btn py-2 rounded-xl text-xs font-black bg-white text-purple-700 shadow-sm transition cursor-pointer">
+                        🗓️ 1週間
+                    </button>
+                    <button type="button" data-period="month" class="ranking-tab-btn py-2 rounded-xl text-xs font-bold text-gray-500 hover:text-purple-600 transition cursor-pointer">
+                        🌙 1か月
+                    </button>
+                    <button type="button" data-period="year" class="ranking-tab-btn py-2 rounded-xl text-xs font-bold text-gray-500 hover:text-purple-600 transition cursor-pointer">
+                        ✨ 1年間
+                    </button>
+                </div>
+
+                <!-- ランキングリスト表示エリア -->
+                <div id="lucky-ranking-list" class="space-y-2.5">
+                    <!-- JSで動的にTOP5を描画します -->
+                </div>
+
+                <p class="text-[11px] text-gray-400 text-center font-medium">
+                    👆 気になる日をタップすると、その日の詳しい星読みが見られます
+                </p>
             </section>
 
             <!-- 個別4カードコンテナ -->
@@ -626,6 +666,7 @@
         let currentChartYear = null;
         let currentChartMonth = null; // 1-12
         let cachedNatalLongitudes = null;
+        let currentRankingPeriod = "week"; // "week" | "month" | "year"
 
         // トースト通知表示関数
         function showToast(message, icon = "✨") {
@@ -880,6 +921,9 @@
                 currentChartMonth = Number(tm);
                 renderMonthlyChart(currentChartYear, currentChartMonth, Number(td));
 
+                // 運勢がいい日ランキング（1週間・1か月・1年間）を描画・更新
+                renderLuckyDaysRanking(tDateStr, currentRankingPeriod);
+
                 // 結果エリアを表示してスムーズにスクロール
                 resultArea.classList.remove('hidden');
                 resultArea.classList.remove('animate-pop-in');
@@ -1025,6 +1069,151 @@
                 container.insertAdjacentHTML('beforeend', cardHTML);
             });
         }
+
+        // ==========================================
+        // 4.5 運勢がいい日ランキング算出・描画ロジック
+        // ==========================================
+        function renderLuckyDaysRanking(baseDateStr, period) {
+            if (!cachedNatalLongitudes) return;
+
+            const [by, bm, bd] = baseDateStr.split('-').map(Number);
+            document.getElementById('ranking-base-label').textContent = `${bm}/${bd}から`;
+
+            // 期間ごとの日数を決定（占いたい日を含めて7日・30日・365日）
+            const daysCount = period === 'week' ? 7 : period === 'month' ? 30 : 365;
+            const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+            const dailyResults = [];
+
+            // UTC基準で日付を加算して正確に1日ずつ進める
+            const startUtc = Date.UTC(by, bm - 1, bd);
+
+            for (let i = 0; i < daysCount; i++) {
+                const currentUtc = new Date(startUtc + i * 86400000);
+                const y = currentUtc.getUTCFullYear();
+                const m = currentUtc.getUTCMonth() + 1;
+                const d = currentUtc.getUTCDate();
+                const w = weekdays[currentUtc.getUTCDay()];
+
+                const yyyy = String(y);
+                const mm = String(m).padStart(2, '0');
+                const dd = String(d).padStart(2, '0');
+                const dateStr = `${yyyy}-${mm}-${dd}`;
+
+                const dayObj = new Date(`${dateStr}T12:00:00+09:00`);
+                const moonLon = getEclipticLongitude("Moon", dayObj);
+
+                const sunRes = evaluateAspectAndScore(cachedNatalLongitudes.sun, moonLon);
+                const venusRes = evaluateAspectAndScore(cachedNatalLongitudes.venus, moonLon);
+                const mercuryRes = evaluateAspectAndScore(cachedNatalLongitudes.mercury, moonLon);
+                const marsRes = evaluateAspectAndScore(cachedNatalLongitudes.mars, moonLon);
+
+                // 小数点付きの正確な総合値（同点時のタイブレーク用）と表示用整数スコア
+                const exactTotal = (sunRes.score * 0.34) + (venusRes.score * 0.22) + (mercuryRes.score * 0.22) + (marsRes.score * 0.22);
+                const totalScore = Math.round(exactTotal);
+
+                // その日一番高い運勢ジャンルを特定
+                const genres = [
+                    { label: "☀️ 全体", score: sunRes.score },
+                    { label: "💖 恋愛", score: venusRes.score },
+                    { label: "🪽 会話", score: mercuryRes.score },
+                    { label: "🔥 行動", score: marsRes.score }
+                ].sort((a, b) => b.score - a.score);
+
+                dailyResults.push({
+                    dateStr,
+                    year: y,
+                    month: m,
+                    day: d,
+                    weekday: w,
+                    totalScore,
+                    exactTotal,
+                    topGenre: genres[0],
+                    moonSign: formatZodiacPosition(moonLon)
+                });
+            }
+
+            // スコアが高い順にソートして上位5日を取得
+            dailyResults.sort((a, b) => b.exactTotal - a.exactTotal);
+            const top5 = dailyResults.slice(0, 5);
+
+            const listEl = document.getElementById('lucky-ranking-list');
+            listEl.innerHTML = "";
+
+            const rankBadges = [
+                { icon: "👑", bg: "bg-gradient-to-r from-amber-100 to-yellow-50 border-amber-300", numColor: "text-amber-600" },
+                { icon: "🥈", bg: "bg-gradient-to-r from-slate-100 to-gray-50 border-slate-300", numColor: "text-slate-600" },
+                { icon: "🥉", bg: "bg-gradient-to-r from-orange-100 to-amber-50 border-orange-200", numColor: "text-orange-600" },
+                { icon: "4位", bg: "bg-white/90 border-purple-100", numColor: "text-purple-600" },
+                { icon: "5位", bg: "bg-white/90 border-purple-100", numColor: "text-purple-600" }
+            ];
+
+            top5.forEach((item, idx) => {
+                const badge = rankBadges[idx];
+                const yearPrefix = period === 'year' ? `${item.year}年` : '';
+                const isSelected = item.dateStr === baseDateStr;
+
+                const rowHTML = `
+                    <button type="button" data-jump-date="${item.dateStr}"
+                        class="ranking-jump-btn w-full text-left p-3 rounded-2xl border ${badge.bg} ${isSelected ? 'ring-2 ring-purple-400' : ''} hover:scale-[1.01] transition flex items-center justify-between gap-2 shadow-xs cursor-pointer">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div class="w-8 h-8 rounded-xl bg-white/90 flex items-center justify-center font-black text-sm ${badge.numColor} shadow-xs shrink-0">
+                                ${badge.icon}
+                            </div>
+                            <div class="min-w-0">
+                                <div class="text-sm font-black text-gray-800 truncate">
+                                    ${yearPrefix}${item.month}月${item.day}日<span class="text-xs font-bold text-gray-500 ml-0.5">(${item.weekday})</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 text-[11px] font-bold text-gray-500 mt-0.5">
+                                    <span>🌙 ${item.moonSign.symbol}${item.moonSign.signName}</span>
+                                    <span class="text-purple-600 bg-white/80 px-1.5 py-0.2 rounded-md">${item.topGenre.label} ${item.topGenre.score}点</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0 flex items-center gap-1.5">
+                            <div>
+                                <span class="text-lg font-black font-num ${badge.numColor}">${item.totalScore}</span>
+                                <span class="text-[10px] font-bold text-gray-500">点</span>
+                            </div>
+                            <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400"></i>
+                        </div>
+                    </button>
+                `;
+                listEl.insertAdjacentHTML('beforeend', rowHTML);
+            });
+
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+
+            // ランキング行タップでその日の運勢にジャンプ
+            listEl.querySelectorAll('.ranking-jump-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const jumpDate = btn.dataset.jumpDate;
+                    const [jy, jm, jd] = jumpDate.split('-').map(Number);
+                    targetDateInput.value = jumpDate;
+                    calculateAndRender();
+                    showToast(`${jy}年${jm}月${jd}日の星模様に切り替えました`, "👑");
+                });
+            });
+        }
+
+        // ランキング期間タブ（1週間 / 1か月 / 1年間）の切り替えイベント
+        document.querySelectorAll('.ranking-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentRankingPeriod = btn.dataset.period;
+
+                // タブの見た目更新
+                document.querySelectorAll('.ranking-tab-btn').forEach(b => {
+                    b.classList.remove('bg-white', 'text-purple-700', 'shadow-sm', 'font-black');
+                    b.classList.add('text-gray-500', 'font-bold');
+                });
+                btn.classList.add('bg-white', 'text-purple-700', 'shadow-sm', 'font-black');
+                btn.classList.remove('text-gray-500', 'font-bold');
+
+                const tDateStr = targetDateInput.value || getTodayString();
+                renderLuckyDaysRanking(tDateStr, currentRankingPeriod);
+            });
+        });
 
         // ==========================================
         // 5. 1か月バイオリズムグラフ描画・操作ロジック
@@ -1259,7 +1448,6 @@
     s.src = "script.js";
     document.body.appendChild(s);
   }
-
 
 
     </script>
